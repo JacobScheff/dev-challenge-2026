@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useLayoutEffect, useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { StarRating } from '@/components/StarRating';
 import { formatDate, money, visitLabel } from '@/lib/format';
 import {
@@ -13,8 +13,52 @@ import {
 } from '@/lib/restaurantSort';
 
 const SORT_STORAGE_KEY = 'feeding-brennen.restaurant-sort';
+const SORT_MOVE_MS = 450;
+const SORT_MOVE_EASE = 'cubic-bezier(0.22, 1, 0.36, 1)';
 const COLUMNS =
   'grid grid-cols-[minmax(0,1fr)_5.5rem_6.75rem] gap-4 sm:grid-cols-[minmax(0,1fr)_6rem_7.25rem]';
+
+function captureItemTops(list: HTMLElement): Map<string, number> {
+  const tops = new Map<string, number>();
+  for (const node of list.children) {
+    if (!(node instanceof HTMLElement) || !node.dataset.restaurantId) continue;
+    tops.set(node.dataset.restaurantId, node.getBoundingClientRect().top);
+  }
+  return tops;
+}
+
+function animateSortReorder(list: HTMLElement, previousTops: Map<string, number>) {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+  const nodes = Array.from(list.children).filter(
+    (node): node is HTMLElement =>
+      node instanceof HTMLElement && Boolean(node.dataset.restaurantId)
+  );
+
+  for (const node of nodes) {
+    for (const animation of node.getAnimations()) {
+      animation.cancel();
+    }
+  }
+
+  for (const node of nodes) {
+    const id = node.dataset.restaurantId;
+    if (!id) continue;
+    const previousTop = previousTops.get(id);
+    if (previousTop == null) continue;
+    const deltaY = previousTop - node.getBoundingClientRect().top;
+    if (Math.abs(deltaY) < 1) continue;
+
+    node.style.zIndex = String(Math.round(Math.abs(deltaY)));
+    const animation = node.animate(
+      [{ transform: `translateY(${deltaY}px)` }, { transform: 'translateY(0)' }],
+      { duration: SORT_MOVE_MS, easing: SORT_MOVE_EASE }
+    );
+    animation.addEventListener('finish', () => {
+      node.style.zIndex = '';
+    });
+  }
+}
 
 function isSortKey(value: unknown): value is RestaurantSortKey {
   return value === 'name' || value === 'spent' || value === 'lastVisit';
@@ -23,7 +67,7 @@ function isSortKey(value: unknown): value is RestaurantSortKey {
 function readStoredSort(): { key: RestaurantSortKey; reversed: boolean } | null {
   if (typeof window === 'undefined') return null;
   try {
-    const raw = window.sessionStorage.getItem(SORT_STORAGE_KEY);
+    const raw = window.localStorage.getItem(SORT_STORAGE_KEY);
     if (!raw) return null;
     const parsed: unknown = JSON.parse(raw);
     if (!parsed || typeof parsed !== 'object') return null;
@@ -105,6 +149,9 @@ function SortBar({
 export function RestaurantList({ restaurants }: { restaurants: RestaurantListItem[] }) {
   const [sortKey, setSortKey] = useState<RestaurantSortKey>('name');
   const [reversed, setReversed] = useState(false);
+  const listRef = useRef<HTMLUListElement>(null);
+  const previousTopsRef = useRef<Map<string, number>>(new Map());
+  const shouldAnimateRef = useRef(false);
 
   useLayoutEffect(() => {
     const stored = readStoredSort();
@@ -113,11 +160,23 @@ export function RestaurantList({ restaurants }: { restaurants: RestaurantListIte
     setReversed(stored.reversed);
   }, []);
 
+  useLayoutEffect(() => {
+    const list = listRef.current;
+    if (!list || !shouldAnimateRef.current) return;
+    shouldAnimateRef.current = false;
+    animateSortReorder(list, previousTopsRef.current);
+  }, [sortKey, reversed]);
+
   function handleSort(nextKey: RestaurantSortKey) {
+    const list = listRef.current;
+    if (list) {
+      previousTopsRef.current = captureItemTops(list);
+      shouldAnimateRef.current = true;
+    }
     const nextReversed = nextKey === sortKey ? !reversed : false;
     setSortKey(nextKey);
     setReversed(nextReversed);
-    window.sessionStorage.setItem(
+    window.localStorage.setItem(
       SORT_STORAGE_KEY,
       JSON.stringify({ key: nextKey, reversed: nextReversed })
     );
@@ -133,11 +192,15 @@ export function RestaurantList({ restaurants }: { restaurants: RestaurantListIte
       <p className="sr-only" aria-live="polite">
         {`Sorted by ${currentLabel}, ${currentDirection}`}
       </p>
-      <ul>
+      <ul ref={listRef}>
         {sorted.map((restaurant, index) => {
           const hasVisits = restaurant.visitCount > 0;
           return (
-            <li key={restaurant.id} className={index > 0 ? 'border-t border-stone-100' : ''}>
+            <li
+              key={restaurant.id}
+              data-restaurant-id={restaurant.id}
+              className={`relative bg-white ${index > 0 ? 'border-t border-stone-100' : ''}`}
+            >
               <Link
                 href={`/restaurants/${restaurant.id}`}
                 className={`${COLUMNS} items-start px-4 py-3.5 transition hover:bg-stone-50`}
