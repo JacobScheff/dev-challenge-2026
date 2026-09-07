@@ -8,6 +8,10 @@ const LINE_COLORS = [
   '#ea580c',
   '#65a30d',
   '#0284c7',
+  '#7c3aed',
+  '#c026d3',
+  '#ca8a04',
+  '#db2777',
 ] as const;
 
 export const SPEND_COLOR = '#1c1917';
