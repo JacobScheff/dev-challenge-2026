@@ -101,7 +101,7 @@ export function RestaurantForm({
             value={rating}
             onChange={(e) => {
               const next = e.target.value;
-              if (next === '' || /^\d*\.?\d{0,1}$/.test(next)) {
+              if (next === '' || /^-?\d*\.?\d{0,1}$/.test(next)) {
                 setRating(next);
               }
             }}
