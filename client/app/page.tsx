@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { SpendOverTime } from '@/components/SpendOverTime';
 import { StarRating } from '@/components/StarRating';
 import { getRestaurants, getSummary } from '@/lib/apiClient';
 import { formatDate, money, visitLabel } from '@/lib/format';
@@ -33,6 +34,8 @@ export default async function HomePage() {
           </div>
         </dl>
       </section>
+
+      <SpendOverTime byMonth={summary.byMonth} />
 
       <section>
         <div className="mb-3 flex items-center justify-between gap-3">

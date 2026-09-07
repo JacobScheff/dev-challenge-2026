@@ -1,7 +1,9 @@
 import { notFound } from 'next/navigation';
 import { BackLink } from '@/components/BackLink';
+import { MonthlyBarChart } from '@/components/SpendCharts';
 import { ApiError, getRestaurant, getRestaurantVisits } from '@/lib/apiClient';
 import { money, visitLabel } from '@/lib/format';
+import { monthsFromVisits } from '@/lib/types';
 import { LogVisitForm } from './LogVisitForm';
 import { RestaurantHeader } from './RestaurantHeader';
 import { VisitList } from './VisitList';
@@ -22,6 +24,7 @@ export default async function RestaurantPage({ params }: Params) {
   }
 
   const totalSpent = visits.reduce((sum, visit) => sum + (visit.amountSpent ?? 0), 0);
+  const byMonth = monthsFromVisits(visits);
 
   return (
     <div className="space-y-8">
@@ -47,6 +50,20 @@ export default async function RestaurantPage({ params }: Params) {
           </dl>
         </header>
       </div>
+
+      {byMonth.length > 0 ? (
+        <section className="rounded-xl border border-stone-200 bg-white p-5 shadow-sm">
+          <p className="text-xs font-medium uppercase tracking-wide text-stone-500">
+            The tab by month
+          </p>
+          <p className="mt-1 text-sm text-stone-500">
+            What this restaurant added to the tab each month.
+          </p>
+          <div className="mt-4">
+            <MonthlyBarChart months={byMonth} />
+          </div>
+        </section>
+      ) : null}
 
       <section className="rounded-xl border border-stone-200 bg-white p-5 shadow-sm">
         <h3 className="text-sm font-medium">Log a visit</h3>

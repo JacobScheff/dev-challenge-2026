@@ -12,6 +12,25 @@ export function money(amount: number): string {
   }).format(amount);
 }
 
+/** Chart-axis currency: drop `.00` on whole dollars. */
+export function axisMoney(amount: number): string {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: Number.isInteger(amount) ? 0 : 2,
+  }).format(amount);
+}
+
+/** Format an API calendar month (`YYYY-MM`) without timezone shift. */
+export function formatMonth(yyyyMm: string): string {
+  const [year, month] = yyyyMm.split('-').map(Number);
+  if (!year || !month) return yyyyMm;
+  return new Date(year, month - 1, 1).toLocaleDateString('en-US', {
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
 /** Format an API calendar date (`YYYY-MM-DD`) without timezone shift. */
 export function formatDate(ymd: string): string {
   const [year, month, day] = ymd.split('-').map(Number);
