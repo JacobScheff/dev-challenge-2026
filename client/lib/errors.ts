@@ -44,6 +44,7 @@ export function handleError(err: unknown): NextResponse {
   // Known Postgres failures. Messages stay generic so we don't leak schema.
   switch (postgresCode(err)) {
     case '23505': // unique_violation
+      return NextResponse.json({ error: 'Already exists' }, { status: 409 });
     case '23503': // foreign_key_violation
       return NextResponse.json({ error: 'Conflict' }, { status: 409 });
     case '23502': // not_null_violation
