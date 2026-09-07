@@ -47,6 +47,24 @@ export interface Visit {
   createdAt: string;
 }
 
+/** One restaurant's contribution to the running tab. */
+export interface RestaurantSpend {
+  id: number;
+  name: string;
+  totalSpent: number;
+  visitCount: number;
+  /** Calendar date of the most recent visit, or null if none. */
+  lastVisit: string | null;
+}
+
+/** Aggregated spend across every visit. */
+export interface SpendSummary {
+  totalSpent: number;
+  visitCount: number;
+  lastVisit: string | null;
+  byRestaurant: RestaurantSpend[];
+}
+
 // --- row mappers -------------------------------------------------------------
 
 /** NUMERIC -> number, preserving null. */
@@ -93,5 +111,33 @@ export function toVisit(row: Record<string, unknown>): Visit {
     amountSpent: num(row.amountSpent),
     notes: (row.notes as string | null) ?? null,
     createdAt: isoTimestamp(row.createdAt ?? row.created_at),
+  };
+}
+
+function lastVisitDate(value: unknown): string | null {
+  if (value === null || value === undefined) return null;
+  return dateOnly(value);
+}
+
+/** Convert a grouped spend row into the shape GET /api/summary returns. */
+export function toRestaurantSpend(row: Record<string, unknown>): RestaurantSpend {
+  return {
+    id: Number(row.id),
+    name: String(row.name),
+    totalSpent: num(row.totalSpent) ?? 0,
+    visitCount: Number(row.visitCount),
+    lastVisit: lastVisitDate(row.lastVisit),
+  };
+}
+
+export function toSpendSummary(
+  totals: Record<string, unknown>,
+  restaurants: Record<string, unknown>[]
+): SpendSummary {
+  return {
+    totalSpent: num(totals.totalSpent) ?? 0,
+    visitCount: Number(totals.visitCount),
+    lastVisit: lastVisitDate(totals.lastVisit),
+    byRestaurant: restaurants.map(toRestaurantSpend),
   };
 }

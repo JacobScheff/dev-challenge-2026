@@ -8,13 +8,41 @@
  * The shapes these helpers return live in `lib/types.ts`, shared with the
  * handlers that produce them.
  */
-import type { Restaurant } from './types';
+import type { Restaurant, SpendSummary, Visit } from './types';
 
 // We read a base URL from the environment because Server Components fetch on
 // the server, where relative URLs don't resolve - so we need an absolute origin.
 // It's the same app on the same port, so this is normally just localhost:3000.
 export const API_URL =
   process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+
+export class ApiError extends Error {
+  readonly status: number;
+
+  constructor(status: number, message: string) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+  }
+}
+
+async function readError(res: Response): Promise<never> {
+  let message = `Request failed (${res.status})`;
+  try {
+    const body: unknown = await res.json();
+    if (
+      body &&
+      typeof body === 'object' &&
+      'error' in body &&
+      typeof (body as { error: unknown }).error === 'string'
+    ) {
+      message = (body as { error: string }).error;
+    }
+  } catch {
+    // Keep the status fallback if the body wasn't JSON.
+  }
+  throw new ApiError(res.status, message);
+}
 
 /**
  * Fetch every restaurant from the API.
@@ -33,5 +61,35 @@ export async function getRestaurants(): Promise<Restaurant[]> {
  */
 export async function getRestaurant(id: number | string): Promise<Restaurant> {
   const res = await fetch(`${API_URL}/api/restaurants/${id}`, { cache: 'no-store' });
+  if (!res.ok) await readError(res);
+  return res.json();
+}
+
+export async function getRestaurantVisits(id: number | string): Promise<Visit[]> {
+  const res = await fetch(`${API_URL}/api/restaurants/${id}/visits`, {
+    cache: 'no-store',
+  });
+  if (!res.ok) await readError(res);
+  return res.json();
+}
+
+export async function getSummary(): Promise<SpendSummary> {
+  const res = await fetch(`${API_URL}/api/summary`, { cache: 'no-store' });
+  if (!res.ok) await readError(res);
+  return res.json();
+}
+
+export async function createVisit(input: {
+  restaurantId: number;
+  date: string;
+  amountSpent: number;
+  notes?: string | null;
+}): Promise<Visit> {
+  const res = await fetch(`${API_URL}/api/visits`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) await readError(res);
   return res.json();
 }
