@@ -1,20 +1,19 @@
 'use client';
 
 import Link from 'next/link';
-import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { useLayoutEffect, useRef, type ReactNode } from 'react';
 import { StarRating } from '@/components/StarRating';
 import { formatDate, money, restaurantDetails, visitLabel } from '@/lib/format';
 import {
   SORT_OPTIONS,
   directionLabel,
-  parseSortState,
   sortLabel,
   sortRestaurants,
   type RestaurantListItem,
   type RestaurantSortKey,
 } from '@/lib/restaurantSort';
+import { useRestaurantSort } from '@/lib/useRestaurantSort';
 
-const SORT_STORAGE_KEY = 'feeding-brennen.restaurant-sort';
 const SORT_MOVE_MS = 450;
 const SORT_MOVE_EASE = 'cubic-bezier(0.22, 1, 0.36, 1)';
 const COLUMNS =
@@ -59,14 +58,6 @@ function animateSortReorder(list: HTMLElement, previousTops: Map<string, number>
     animation.addEventListener('finish', () => {
       node.style.zIndex = '';
     });
-  }
-}
-
-function readStoredSort(): { key: RestaurantSortKey; reversed: boolean } | null {
-  try {
-    return parseSortState(window.localStorage.getItem(SORT_STORAGE_KEY));
-  } catch {
-    return null;
   }
 }
 
@@ -143,18 +134,10 @@ export function RestaurantList({
   restaurants: RestaurantListItem[];
   leading?: ReactNode;
 }) {
-  const [sortKey, setSortKey] = useState<RestaurantSortKey>('name');
-  const [reversed, setReversed] = useState(false);
+  const { sortKey, reversed, applySort } = useRestaurantSort();
   const listRef = useRef<HTMLUListElement>(null);
   const previousTopsRef = useRef<Map<string, number>>(new Map());
   const shouldAnimateRef = useRef(false);
-
-  useLayoutEffect(() => {
-    const stored = readStoredSort();
-    if (!stored) return;
-    setSortKey(stored.key);
-    setReversed(stored.reversed);
-  }, []);
 
   useLayoutEffect(() => {
     const list = listRef.current;
@@ -169,13 +152,7 @@ export function RestaurantList({
       previousTopsRef.current = captureItemTops(list);
       shouldAnimateRef.current = true;
     }
-    const nextReversed = nextKey === sortKey ? !reversed : false;
-    setSortKey(nextKey);
-    setReversed(nextReversed);
-    window.localStorage.setItem(
-      SORT_STORAGE_KEY,
-      JSON.stringify({ key: nextKey, reversed: nextReversed })
-    );
+    applySort(nextKey);
   }
 
   const sorted = sortRestaurants(restaurants, sortKey, reversed);

@@ -12,12 +12,15 @@ const LINE_COLORS = [
 
 export const SPEND_COLOR = '#1c1917';
 
-type LineSeries = {
+export type LineSeries = {
   key: string;
   label: string;
   color: string;
-  isTotal: boolean;
 };
+
+function restaurantId(series: LineSeries): number {
+  return Number(series.key.slice(1));
+}
 
 function restaurantMeta(months: MonthSpend[]): { id: number; name: string }[] {
   const names = new Map<number, string>();
@@ -27,6 +30,27 @@ function restaurantMeta(months: MonthSpend[]): { id: number; name: string }[] {
   return [...names.entries()]
     .sort((a, b) => a[0] - b[0])
     .map(([id, name]) => ({ id, name }));
+}
+
+/** Label order follows the restaurant list. */
+export function orderedLineSeries(
+  series: LineSeries[],
+  restaurantOrder: number[] | undefined
+): LineSeries[] {
+  const rank = new Map((restaurantOrder ?? []).map((id, index) => [id, index]));
+  return [...series].sort((a, b) => {
+    const left = rank.get(restaurantId(a));
+    const right = rank.get(restaurantId(b));
+    if (left == null && right == null) return restaurantId(a) - restaurantId(b);
+    if (left == null) return 1;
+    if (right == null) return -1;
+    return left - right;
+  });
+}
+
+function colorForRestaurant(id: number, idsById: number[]): string {
+  const index = idsById.indexOf(id);
+  return LINE_COLORS[(index < 0 ? 0 : index) % LINE_COLORS.length];
 }
 
 function niceTicks(max: number): number[] {
@@ -64,27 +88,21 @@ export function toLineChartModel(months: MonthSpend[]): {
   rows: Record<string, string | number>[];
   series: LineSeries[];
   restaurantMax: number;
-  totalMax: number;
 } {
   const restaurants = restaurantMeta(months);
-  const series: LineSeries[] = [
-    ...restaurants.map((restaurant, index) => ({
-      key: `r${restaurant.id}`,
-      label: restaurant.name,
-      color: LINE_COLORS[index % LINE_COLORS.length],
-      isTotal: false,
-    })),
-    { key: 'total', label: 'Total', color: SPEND_COLOR, isTotal: true },
-  ];
+  const idsById = [...restaurants].map((row) => row.id).sort((a, b) => a - b);
+  const series: LineSeries[] = restaurants.map((restaurant) => ({
+    key: `r${restaurant.id}`,
+    label: restaurant.name,
+    color: colorForRestaurant(restaurant.id, idsById),
+  }));
 
   const runningById = new Map<number, number>(restaurants.map((row) => [row.id, 0]));
-  let totalRunning = 0;
   const rows: Record<string, string | number>[] = [];
 
   for (const month of months) {
     const spentById = new Map(month.byRestaurant.map((row) => [row.id, row.totalSpent]));
-    totalRunning += month.totalSpent;
-    const row: Record<string, string | number> = { month: month.month, total: totalRunning };
+    const row: Record<string, string | number> = { month: month.month };
     for (const restaurant of restaurants) {
       const next = (runningById.get(restaurant.id) ?? 0) + (spentById.get(restaurant.id) ?? 0);
       runningById.set(restaurant.id, next);
@@ -95,9 +113,8 @@ export function toLineChartModel(months: MonthSpend[]): {
 
   // Spend is non-negative, so running totals peak on the last month.
   const last = rows[rows.length - 1];
-  const totalMax = last ? Number(last.total) || 0 : 0;
   const restaurantMax = last
     ? Math.max(0, ...restaurants.map((restaurant) => Number(last[`r${restaurant.id}`]) || 0))
     : 0;
-  return { rows, series, restaurantMax, totalMax };
+  return { rows, series, restaurantMax };
 }

@@ -1,5 +1,7 @@
 import type { Restaurant, RestaurantSpend } from './types';
 
+export const SORT_STORAGE_KEY = 'feeding-brennen.restaurant-sort';
+
 export const SORT_OPTIONS = [
   { key: 'name', label: 'Name', forward: 'A–Z', reverse: 'Z–A' },
   { key: 'spent', label: 'Spent', forward: 'High–low', reverse: 'Low–high' },

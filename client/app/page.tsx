@@ -11,6 +11,9 @@ export default async function HomePage() {
   ]);
 
   const spendById = new Map(summary.byRestaurant.map((row) => [row.id, row]));
+  const restaurantItems = restaurants.map((restaurant) =>
+    toRestaurantListItem(restaurant, spendById.get(restaurant.id))
+  );
 
   return (
     <div className="space-y-8">
@@ -35,13 +38,11 @@ export default async function HomePage() {
         </dl>
       </section>
 
-      <SpendOverTime byMonth={summary.byMonth} />
+      <div className="relative left-1/2 w-[calc(100vw-2.5rem)] -translate-x-1/2">
+        <SpendOverTime byMonth={summary.byMonth} restaurants={restaurantItems} />
+      </div>
 
-      <RestaurantsSection
-        restaurants={restaurants.map((restaurant) =>
-          toRestaurantListItem(restaurant, spendById.get(restaurant.id))
-        )}
-      />
+      <RestaurantsSection restaurants={restaurantItems} />
     </div>
   );
 }
