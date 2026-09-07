@@ -59,12 +59,20 @@ const valueAxis = {
 function TooltipFrame({
   title,
   children,
+  transparent = false,
 }: {
   title: string;
   children: ReactNode;
+  transparent?: boolean;
 }) {
   return (
-    <div className="rounded-lg border border-stone-200 bg-white px-3 py-2 shadow-md">
+    <div
+      className={
+        transparent
+          ? 'rounded-lg border border-stone-200/70 bg-white/90 px-3 py-2 shadow-sm'
+          : 'rounded-lg border border-stone-200 bg-white px-3 py-2 shadow-md'
+      }
+    >
       <p className="text-xs font-medium text-stone-500">{title}</p>
       <div className="mt-1">{children}</div>
     </div>
@@ -78,7 +86,7 @@ function LineTooltip({ active, payload, label }: TooltipProps<number, string>) {
   );
 
   return (
-    <TooltipFrame title={formatMonth(String(label ?? ''))}>
+    <TooltipFrame title={formatMonth(String(label ?? ''))} transparent>
       <ul className="space-y-0.5">
         {rows.map((item) => (
           <li
@@ -588,7 +596,7 @@ function LineNameOverlay({
 
   return (
     <svg
-      className="pointer-events-none absolute inset-0 h-full w-full overflow-visible"
+      className="pointer-events-none absolute inset-0 z-[1] h-full w-full overflow-visible"
       aria-hidden="true"
     >
       {targets.map((line) => {
@@ -631,6 +639,21 @@ export function RunningTotalChart({
 
   useLayoutEffect(() => {
     const root = plotRef.current;
+    if (!root) return;
+
+    const adoptTooltip = () => {
+      const tip = root.querySelector('.recharts-tooltip-wrapper');
+      if (tip && tip.parentElement !== root) root.appendChild(tip);
+    };
+
+    adoptTooltip();
+    const observer = new MutationObserver(adoptTooltip);
+    observer.observe(root, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, []);
+
+  useLayoutEffect(() => {
+    const root = plotRef.current;
     if (!root || prefersReducedMotion()) return;
 
     let cancelled = false;
@@ -670,6 +693,13 @@ export function RunningTotalChart({
               />
               <Tooltip
                 cursor={{ stroke: '#a8a29e', strokeDasharray: '3 3' }}
+                wrapperStyle={{
+                  background: 'transparent',
+                  border: 'none',
+                  boxShadow: 'none',
+                  outline: 'none',
+                  zIndex: 20,
+                }}
                 content={<LineTooltip />}
               />
               {series.map((line) => (
