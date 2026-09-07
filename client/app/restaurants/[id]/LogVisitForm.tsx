@@ -2,6 +2,7 @@
 
 import { useLayoutEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { FormError } from '@/components/FormError';
 import { ApiError, createVisit } from '@/lib/apiClient';
 import { todayYmd } from '@/lib/format';
 
@@ -27,7 +28,7 @@ export function LogVisitForm({ restaurantId }: { restaurantId: number }) {
 
     const amountSpent = Number(amount);
     if (amount.trim() === '' || !Number.isFinite(amountSpent)) {
-      setError('Enter how much was spent');
+      setError('Enter how much was spent.');
       return;
     }
 
@@ -99,7 +100,7 @@ export function LogVisitForm({ restaurantId }: { restaurantId: number }) {
           className="field max-h-80 min-h-[3.75rem] resize-none overflow-y-auto"
         />
       </label>
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
+      {error ? <FormError message={error} /> : null}
       <button
         type="submit"
         disabled={submitting}

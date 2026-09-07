@@ -1,9 +1,9 @@
 import { notFound } from 'next/navigation';
 import { BackLink } from '@/components/BackLink';
-import { StarRating } from '@/components/StarRating';
 import { ApiError, getRestaurant, getRestaurantVisits } from '@/lib/apiClient';
 import { formatDate, money, visitLabel } from '@/lib/format';
 import { LogVisitForm } from './LogVisitForm';
+import { RestaurantHeader } from './RestaurantHeader';
 
 type Params = { params: { id: string } };
 
@@ -28,18 +28,7 @@ export default async function RestaurantPage({ params }: Params) {
         <BackLink />
 
         <header className="mt-4">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h2 className="text-2xl font-semibold tracking-tight">
-                {restaurant.name}
-              </h2>
-              <p className="mt-1 text-sm text-stone-500">
-                {[restaurant.cuisine, restaurant.address].filter(Boolean).join(' · ') ||
-                  'No details yet'}
-              </p>
-            </div>
-            <StarRating rating={restaurant.rating} size="md" />
-          </div>
+          <RestaurantHeader restaurant={restaurant} />
 
           <dl className="mt-5 grid grid-cols-2 gap-3 rounded-xl border border-stone-200 bg-white px-4 py-3 shadow-sm">
             <div>

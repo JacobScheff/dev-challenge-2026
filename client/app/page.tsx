@@ -35,9 +35,19 @@ export default async function HomePage() {
       </section>
 
       <section>
-        <h2 className="mb-3 text-sm font-medium text-stone-500">Restaurants</h2>
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 className="text-sm font-medium text-stone-500">Restaurants</h2>
+          <Link
+            href="/restaurants/new"
+            className="rounded-lg bg-stone-900 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-stone-800"
+          >
+            Add restaurant
+          </Link>
+        </div>
         {restaurants.length === 0 ? (
-          <p className="text-sm text-stone-500">No restaurants yet.</p>
+          <p className="rounded-xl border border-dashed border-stone-300 bg-white px-4 py-8 text-center text-sm text-stone-500">
+            No restaurants yet. Add one to start tracking visits.
+          </p>
         ) : (
           <ul className="overflow-hidden rounded-xl border border-stone-200 bg-white shadow-sm">
             {restaurants.map((restaurant, index) => {

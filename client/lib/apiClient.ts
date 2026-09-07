@@ -23,6 +23,13 @@ export class ApiError extends Error {
   }
 }
 
+type RestaurantWrite = {
+  name: string;
+  cuisine?: string | null;
+  address?: string | null;
+  rating?: number | null;
+};
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, { cache: 'no-store', ...init });
   if (!res.ok) {
@@ -41,6 +48,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       // Keep the status fallback if the body wasn't JSON.
     }
     throw new ApiError(res.status, message);
+  }
+  // DELETE returns 204 with an empty body.
+  if (res.status === 204) {
+    return undefined as T;
   }
   return res.json();
 }
@@ -72,4 +83,27 @@ export function createVisit(input: {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(input),
   });
+}
+
+export function createRestaurant(input: RestaurantWrite): Promise<Restaurant> {
+  return request('/api/restaurants', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateRestaurant(
+  id: number | string,
+  input: RestaurantWrite
+): Promise<Restaurant> {
+  return request(`/api/restaurants/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+}
+
+export function deleteRestaurant(id: number | string): Promise<void> {
+  return request(`/api/restaurants/${id}`, { method: 'DELETE' });
 }

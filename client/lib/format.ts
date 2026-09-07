@@ -26,3 +26,11 @@ export function formatDate(ymd: string): string {
 export function visitLabel(count: number): string {
   return count === 1 ? '1 visit' : `${count} visits`;
 }
+
+/** Make API/field errors readable in the UI (sentence case, trailing period). */
+export function formatUiError(message: string): string {
+  const trimmed = message.trim();
+  if (trimmed === '') return 'Something went wrong.';
+  const capitalized = trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+  return /[.!?]$/.test(capitalized) ? capitalized : `${capitalized}.`;
+}
