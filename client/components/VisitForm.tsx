@@ -4,7 +4,6 @@ import { useLayoutEffect, useRef, useState } from 'react';
 import { FormError } from '@/components/FormError';
 import { ApiError } from '@/lib/apiClient';
 import { todayYmd } from '@/lib/format';
-import type { Visit } from '@/lib/types';
 
 type VisitFormValues = {
   date: string;
@@ -12,24 +11,16 @@ type VisitFormValues = {
   notes: string | null;
 };
 
-function amountField(value: number | null | undefined): string {
-  return value == null ? '' : String(value);
-}
-
 export function VisitForm({
-  initial,
   submitLabel,
   onSubmit,
-  onCancel,
 }: {
-  initial?: Pick<Visit, 'date' | 'amountSpent' | 'notes'>;
   submitLabel: string;
   onSubmit: (values: VisitFormValues) => Promise<void>;
-  onCancel?: () => void;
 }) {
-  const [date, setDate] = useState(initial?.date ?? todayYmd());
-  const [amount, setAmount] = useState(amountField(initial?.amountSpent));
-  const [notes, setNotes] = useState(initial?.notes ?? '');
+  const [date, setDate] = useState(todayYmd());
+  const [amount, setAmount] = useState('');
+  const [notes, setNotes] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const notesRef = useRef<HTMLTextAreaElement>(null);
@@ -58,11 +49,9 @@ export function VisitForm({
         amountSpent,
         notes: notes.trim() === '' ? null : notes,
       });
-      if (!initial) {
-        setDate(todayYmd());
-        setAmount('');
-        setNotes('');
-      }
+      setDate(todayYmd());
+      setAmount('');
+      setNotes('');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not save visit');
     } finally {
@@ -128,16 +117,6 @@ export function VisitForm({
         >
           {submitting ? 'Saving...' : submitLabel}
         </button>
-        {onCancel ? (
-          <button
-            type="button"
-            disabled={submitting}
-            onClick={onCancel}
-            className="rounded-lg border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-800 shadow-sm transition hover:bg-stone-50 disabled:opacity-50"
-          >
-            Cancel
-          </button>
-        ) : null}
       </div>
     </form>
   );
