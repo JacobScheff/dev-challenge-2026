@@ -5,7 +5,6 @@ import { ApiError, getRestaurant, getRestaurantVisits } from '@/lib/apiClient';
 import { money, visitLabel } from '@/lib/format';
 import { monthsFromVisits } from '@/lib/types';
 import { UnsavedChangesProvider } from '@/components/UnsavedChanges';
-import { LogVisitForm } from './LogVisitForm';
 import { RestaurantHeader } from './RestaurantHeader';
 import { VisitList } from './VisitList';
 
@@ -67,26 +66,7 @@ export default async function RestaurantPage({ params }: Params) {
           </section>
         ) : null}
 
-        <section className="rounded-xl border border-stone-200 bg-white p-5 shadow-sm">
-          <h3 className="text-sm font-medium">Log a visit</h3>
-          <p className="mt-0.5 text-sm text-stone-500">
-            Add what this meal cost. Notes are optional.
-          </p>
-          <div className="mt-4">
-            <LogVisitForm restaurantId={restaurant.id} />
-          </div>
-        </section>
-
-        <section>
-          <h3 className="mb-3 text-sm font-medium text-stone-500">Visits</h3>
-          {visits.length === 0 ? (
-            <p className="rounded-xl border border-dashed border-stone-300 bg-white px-4 py-8 text-center text-sm text-stone-500">
-              Nothing logged yet. Use the form above to add the first visit.
-            </p>
-          ) : (
-            <VisitList visits={visits} />
-          )}
-        </section>
+        <VisitList restaurantId={restaurant.id} visits={visits} />
       </div>
     </UnsavedChangesProvider>
   );

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { StarRating } from '@/components/StarRating';
 import { formatDate, money, restaurantDetails, visitLabel } from '@/lib/format';
 import {
@@ -136,7 +136,13 @@ function SortBar({
   );
 }
 
-export function RestaurantList({ restaurants }: { restaurants: RestaurantListItem[] }) {
+export function RestaurantList({
+  restaurants,
+  leading,
+}: {
+  restaurants: RestaurantListItem[];
+  leading?: ReactNode;
+}) {
   const [sortKey, setSortKey] = useState<RestaurantSortKey>('name');
   const [reversed, setReversed] = useState(false);
   const listRef = useRef<HTMLUListElement>(null);
@@ -178,11 +184,18 @@ export function RestaurantList({ restaurants }: { restaurants: RestaurantListIte
 
   return (
     <div className="overflow-hidden rounded-xl border border-stone-200 bg-white shadow-sm">
-      <SortBar sortKey={sortKey} reversed={reversed} onSort={handleSort} />
-      <p className="sr-only" aria-live="polite">
-        {`Sorted by ${currentLabel}, ${currentDirection}`}
-      </p>
+      {restaurants.length > 0 ? (
+        <>
+          <SortBar sortKey={sortKey} reversed={reversed} onSort={handleSort} />
+          <p className="sr-only" aria-live="polite">
+            {`Sorted by ${currentLabel}, ${currentDirection}`}
+          </p>
+        </>
+      ) : null}
       <ul ref={listRef}>
+        {leading ? (
+          <li className={sorted.length > 0 ? 'border-b border-stone-100' : ''}>{leading}</li>
+        ) : null}
         {sorted.map((restaurant, index) => {
           const hasVisits = restaurant.visitCount > 0;
           return (

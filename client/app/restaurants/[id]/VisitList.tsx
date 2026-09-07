@@ -4,7 +4,7 @@ import { useLayoutEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { FormError } from '@/components/FormError';
 import { useUnsavedChanges } from '@/components/UnsavedChanges';
-import { ApiError, deleteVisit, updateVisit } from '@/lib/apiClient';
+import { ApiError, createVisit, deleteVisit, updateVisit } from '@/lib/apiClient';
 import { formatDate, money, todayYmd } from '@/lib/format';
 import type { Visit } from '@/lib/types';
 
@@ -19,13 +19,175 @@ function amountField(value: number | null | undefined): string {
   return value == null ? '' : String(value);
 }
 
-export function VisitList({ visits }: { visits: Visit[] }) {
+export function VisitList({
+  restaurantId,
+  visits,
+}: {
+  restaurantId: number;
+  visits: Visit[];
+}) {
+  const [creating, setCreating] = useState(false);
+
   return (
-    <ul className="overflow-hidden rounded-xl border border-stone-200 bg-white shadow-sm">
-      {visits.map((visit, index) => (
-        <VisitRow key={visit.id} visit={visit} bordered={index > 0} />
-      ))}
-    </ul>
+    <section>
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <h3 className="text-sm font-medium text-stone-500">Visits</h3>
+        {creating ? null : (
+          <button
+            type="button"
+            onClick={() => setCreating(true)}
+            className="rounded-lg bg-stone-900 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-stone-800"
+          >
+            Log visit
+          </button>
+        )}
+      </div>
+      {visits.length === 0 && !creating ? (
+        <p className="rounded-xl border border-dashed border-stone-300 bg-white px-4 py-8 text-center text-sm text-stone-500">
+          Nothing logged yet. Add a visit to start tracking this place.
+        </p>
+      ) : (
+        <ul className="overflow-hidden rounded-xl border border-stone-200 bg-white shadow-sm">
+          {creating ? (
+            <NewVisitRow restaurantId={restaurantId} onClose={() => setCreating(false)} />
+          ) : null}
+          {visits.map((visit, index) => (
+            <VisitRow key={visit.id} visit={visit} bordered={creating || index > 0} />
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+function NewVisitRow({
+  restaurantId,
+  onClose,
+}: {
+  restaurantId: number;
+  onClose: () => void;
+}) {
+  const router = useRouter();
+  const [date, setDate] = useState(todayYmd());
+  const [amount, setAmount] = useState('');
+  const [notes, setNotes] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const notesRef = useRef<HTMLTextAreaElement>(null);
+  useUnsavedChanges('visit-new', true);
+
+  useLayoutEffect(() => {
+    const el = notesRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+  }, [notes]);
+
+  async function save() {
+    const amountSpent = Number(amount);
+    if (date === '') {
+      setError('Date is required.');
+      return;
+    }
+    if (amount.trim() === '' || !Number.isFinite(amountSpent)) {
+      setError('Enter how much was spent.');
+      return;
+    }
+
+    setError(null);
+    setSaving(true);
+    try {
+      await createVisit({
+        restaurantId,
+        date,
+        amountSpent,
+        notes: notes.trim() === '' ? null : notes.trim(),
+      });
+      onClose();
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Could not save visit');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <li>
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+        }}
+      >
+        <div className="flex items-start">
+          <div className="min-w-0 flex-1 px-4 py-3">
+            <input
+              type="date"
+              required
+              max={todayYmd()}
+              value={date}
+              onChange={(event) => setDate(event.target.value)}
+              aria-label="Date"
+              className={inlineDate}
+            />
+            <textarea
+              ref={notesRef}
+              rows={1}
+              maxLength={2000}
+              value={notes}
+              onChange={(event) => setNotes(event.target.value)}
+              aria-label="Notes"
+              placeholder="Notes"
+              className={inlineNotes}
+            />
+          </div>
+          <div className="flex shrink-0 items-baseline gap-0.5 py-3">
+            <span aria-hidden="true" className="text-sm text-stone-500">
+              $
+            </span>
+            <input
+              type="text"
+              inputMode="decimal"
+              required
+              placeholder="0.00"
+              value={amount}
+              autoFocus
+              onChange={(event) => {
+                const next = event.target.value;
+                if (next === '' || /^\d*\.?\d{0,2}$/.test(next)) {
+                  setAmount(next);
+                }
+              }}
+              aria-label="Amount spent"
+              className={inlineAmount}
+            />
+          </div>
+          <div className="flex shrink-0 gap-1.5 py-3 pl-2 pr-4">
+            <button
+              type="button"
+              disabled={saving}
+              onClick={onClose}
+              className="rounded-lg border border-stone-300 bg-white px-2.5 py-1 text-xs font-medium text-stone-800 shadow-sm transition hover:bg-stone-50 disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              disabled={saving}
+              onClick={() => void save()}
+              className="rounded-lg bg-stone-900 px-2.5 py-1 text-xs font-medium text-white transition hover:bg-stone-800 disabled:opacity-50"
+            >
+              {saving ? 'Saving...' : 'Save'}
+            </button>
+          </div>
+        </div>
+        {error ? (
+          <div className="px-4 pb-3">
+            <FormError message={error} />
+          </div>
+        ) : null}
+      </form>
+    </li>
   );
 }
 
@@ -115,7 +277,6 @@ function VisitRow({ visit, bordered }: { visit: Visit; bordered: boolean }) {
       <form
         onSubmit={(event) => {
           event.preventDefault();
-          if (editing) void save();
         }}
       >
         <div className="flex items-start">
@@ -187,8 +348,9 @@ function VisitRow({ visit, bordered }: { visit: Visit; bordered: boolean }) {
                 Cancel
               </button>
               <button
-                type="submit"
+                type="button"
                 disabled={saving}
+                onClick={() => void save()}
                 className="rounded-lg bg-stone-900 px-2.5 py-1 text-xs font-medium text-white transition hover:bg-stone-800 disabled:opacity-50"
               >
                 {saving ? 'Saving...' : 'Save'}

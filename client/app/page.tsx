@@ -1,5 +1,4 @@
-import Link from 'next/link';
-import { RestaurantList } from '@/components/RestaurantList';
+import { RestaurantsSection } from '@/components/RestaurantsSection';
 import { SpendOverTime } from '@/components/SpendOverTime';
 import { getRestaurants, getSummary } from '@/lib/apiClient';
 import { formatDate, money, visitLabel } from '@/lib/format';
@@ -38,28 +37,11 @@ export default async function HomePage() {
 
       <SpendOverTime byMonth={summary.byMonth} />
 
-      <section>
-        <div className="mb-3 flex items-center justify-between gap-3">
-          <h2 className="text-sm font-medium text-stone-500">Restaurants</h2>
-          <Link
-            href="/restaurants/new"
-            className="rounded-lg bg-stone-900 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-stone-800"
-          >
-            Add restaurant
-          </Link>
-        </div>
-        {restaurants.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-stone-300 bg-white px-4 py-8 text-center text-sm text-stone-500">
-            No restaurants yet. Add one to start tracking visits.
-          </p>
-        ) : (
-          <RestaurantList
-            restaurants={restaurants.map((restaurant) =>
-              toRestaurantListItem(restaurant, spendById.get(restaurant.id))
-            )}
-          />
+      <RestaurantsSection
+        restaurants={restaurants.map((restaurant) =>
+          toRestaurantListItem(restaurant, spendById.get(restaurant.id))
         )}
-      </section>
+      />
     </div>
   );
 }
