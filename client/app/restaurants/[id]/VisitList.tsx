@@ -3,6 +3,7 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { FormError } from '@/components/FormError';
+import { useUnsavedChanges } from '@/components/UnsavedChanges';
 import { ApiError, deleteVisit, updateVisit } from '@/lib/apiClient';
 import { formatDate, money, todayYmd } from '@/lib/format';
 import type { Visit } from '@/lib/types';
@@ -40,6 +41,7 @@ function VisitRow({ visit, bordered }: { visit: Visit; bordered: boolean }) {
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const notesRef = useRef<HTMLTextAreaElement>(null);
+  useUnsavedChanges(`visit-${visit.id}`, editing);
 
   useLayoutEffect(() => {
     if (!editing) return;

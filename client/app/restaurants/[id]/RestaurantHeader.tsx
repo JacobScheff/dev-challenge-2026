@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { FormError } from '@/components/FormError';
 import { StarRating } from '@/components/StarRating';
+import { useUnsavedChanges } from '@/components/UnsavedChanges';
 import { ApiError, deleteRestaurant, updateRestaurant } from '@/lib/apiClient';
 import { restaurantDetails } from '@/lib/format';
 import type { Restaurant } from '@/lib/types';
@@ -25,6 +26,7 @@ export function RestaurantHeader({ restaurant }: { restaurant: Restaurant }) {
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  useUnsavedChanges(`restaurant-${restaurant.id}`, editing);
 
   function startEdit() {
     setName(restaurant.name);

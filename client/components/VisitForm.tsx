@@ -2,6 +2,7 @@
 
 import { useLayoutEffect, useRef, useState } from 'react';
 import { FormError } from '@/components/FormError';
+import { useUnsavedChanges } from '@/components/UnsavedChanges';
 import { ApiError } from '@/lib/apiClient';
 import { todayYmd } from '@/lib/format';
 
@@ -24,6 +25,9 @@ export function VisitForm({
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const notesRef = useRef<HTMLTextAreaElement>(null);
+  const started =
+    amount.trim() !== '' || notes.trim() !== '' || date !== todayYmd();
+  useUnsavedChanges('log-visit', started);
 
   useLayoutEffect(() => {
     const el = notesRef.current;
