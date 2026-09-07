@@ -3,13 +3,7 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ApiError, createVisit } from '@/lib/apiClient';
-
-function todayYmd(): string {
-  const now = new Date();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  return `${now.getFullYear()}-${month}-${day}`;
-}
+import { todayYmd } from '@/lib/format';
 
 export function LogVisitForm({ restaurantId }: { restaurantId: number }) {
   const router = useRouter();

@@ -1,18 +1,6 @@
 import { HttpError } from '@/lib/errors';
-
-export type VisitInput = {
-  restaurantId: number;
-  date: string;
-  amountSpent: number;
-  notes: string | null;
-};
-
-function todayYmd(): string {
-  const now = new Date();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  return `${now.getFullYear()}-${month}-${day}`;
-}
+import { todayYmd } from '@/lib/format';
+import { optionalString, requireBody } from '@/lib/validate';
 
 /**
  * Calendar date as `YYYY-MM-DD`. Rejects the wrong shape, impossible
@@ -71,12 +59,8 @@ function parseAmountSpent(value: unknown): number {
  * in the body (400 if it isn't). A well-formed id that doesn't exist
  * is a 404 — the route checks that after parsing.
  */
-export function parseVisitBody(body: unknown): VisitInput {
-  if (body === null || typeof body !== 'object' || Array.isArray(body)) {
-    throw new HttpError(400, 'Invalid body');
-  }
-
-  const { restaurantId, date, amountSpent, notes } = body as Record<string, unknown>;
+export function parseVisitBody(body: unknown) {
+  const { restaurantId, date, amountSpent, notes } = requireBody(body);
 
   if (
     typeof restaurantId !== 'number' ||
@@ -86,22 +70,10 @@ export function parseVisitBody(body: unknown): VisitInput {
     throw new HttpError(400, 'restaurantId must be a positive integer');
   }
 
-  let parsedNotes: string | null = null;
-  if (notes !== undefined && notes !== null) {
-    if (typeof notes !== 'string') {
-      throw new HttpError(400, 'notes must be a string');
-    }
-    const trimmed = notes.trim();
-    if (trimmed.length > 2000) {
-      throw new HttpError(400, 'notes must be 2000 characters or fewer');
-    }
-    parsedNotes = trimmed === '' ? null : trimmed;
-  }
-
   return {
     restaurantId,
     date: parseDateOnly(date),
     amountSpent: parseAmountSpent(amountSpent),
-    notes: parsedNotes,
+    notes: optionalString(notes, 'notes', 2000),
   };
 }

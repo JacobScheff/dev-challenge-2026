@@ -10,11 +10,8 @@
  */
 import type { Restaurant, SpendSummary, Visit } from './types';
 
-// We read a base URL from the environment because Server Components fetch on
-// the server, where relative URLs don't resolve - so we need an absolute origin.
-// It's the same app on the same port, so this is normally just localhost:3000.
-export const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+// Server Components fetch on the server, where relative URLs don't resolve.
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
 export class ApiError extends Error {
   readonly status: number;
@@ -26,70 +23,53 @@ export class ApiError extends Error {
   }
 }
 
-async function readError(res: Response): Promise<never> {
-  let message = `Request failed (${res.status})`;
-  try {
-    const body: unknown = await res.json();
-    if (
-      body &&
-      typeof body === 'object' &&
-      'error' in body &&
-      typeof (body as { error: unknown }).error === 'string'
-    ) {
-      message = (body as { error: string }).error;
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(`${API_URL}${path}`, { cache: 'no-store', ...init });
+  if (!res.ok) {
+    let message = `Request failed (${res.status})`;
+    try {
+      const body: unknown = await res.json();
+      if (
+        body &&
+        typeof body === 'object' &&
+        'error' in body &&
+        typeof (body as { error: unknown }).error === 'string'
+      ) {
+        message = (body as { error: string }).error;
+      }
+    } catch {
+      // Keep the status fallback if the body wasn't JSON.
     }
-  } catch {
-    // Keep the status fallback if the body wasn't JSON.
+    throw new ApiError(res.status, message);
   }
-  throw new ApiError(res.status, message);
-}
-
-/**
- * Fetch every restaurant from the API.
- *
- * NOTE: this is a bare fetch with no error handling. It does not check the
- * response status and it does not catch network failures - callers get whatever
- * `res.json()` produces, including on a 500.
- */
-export async function getRestaurants(): Promise<Restaurant[]> {
-  const res = await fetch(`${API_URL}/api/restaurants`, { cache: 'no-store' });
   return res.json();
 }
 
-/**
- * Fetch a single restaurant by id.
- */
-export async function getRestaurant(id: number | string): Promise<Restaurant> {
-  const res = await fetch(`${API_URL}/api/restaurants/${id}`, { cache: 'no-store' });
-  if (!res.ok) await readError(res);
-  return res.json();
+export function getRestaurants(): Promise<Restaurant[]> {
+  return request('/api/restaurants');
 }
 
-export async function getRestaurantVisits(id: number | string): Promise<Visit[]> {
-  const res = await fetch(`${API_URL}/api/restaurants/${id}/visits`, {
-    cache: 'no-store',
-  });
-  if (!res.ok) await readError(res);
-  return res.json();
+export function getRestaurant(id: number | string): Promise<Restaurant> {
+  return request(`/api/restaurants/${id}`);
 }
 
-export async function getSummary(): Promise<SpendSummary> {
-  const res = await fetch(`${API_URL}/api/summary`, { cache: 'no-store' });
-  if (!res.ok) await readError(res);
-  return res.json();
+export function getRestaurantVisits(id: number | string): Promise<Visit[]> {
+  return request(`/api/restaurants/${id}/visits`);
 }
 
-export async function createVisit(input: {
+export function getSummary(): Promise<SpendSummary> {
+  return request('/api/summary');
+}
+
+export function createVisit(input: {
   restaurantId: number;
   date: string;
   amountSpent: number;
   notes?: string | null;
 }): Promise<Visit> {
-  const res = await fetch(`${API_URL}/api/visits`, {
+  return request('/api/visits', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(input),
   });
-  if (!res.ok) await readError(res);
-  return res.json();
 }

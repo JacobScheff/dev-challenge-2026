@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { pool } from '@/db/pool';
-import { handleError, HttpError } from '@/lib/errors';
-import { toVisit } from '@/lib/types';
-import { parseRestaurantId } from '../../validate';
+import { handleError, restaurantNotFound } from '@/lib/errors';
+import { VISIT_COLUMNS, toVisit } from '@/lib/types';
+import { parseRestaurantId } from '@/lib/validate';
 
 type Params = { params: { id: string } };
 
@@ -20,12 +20,11 @@ export async function GET(_req: Request, { params }: Params) {
       [id]
     );
     if (restaurant.rows.length === 0) {
-      throw new HttpError(404, 'Restaurant not found');
+      restaurantNotFound();
     }
 
     const { rows } = await pool.query(
-      `SELECT id, "restaurantId", date, "amountSpent", notes,
-              created_at AS "createdAt"
+      `SELECT ${VISIT_COLUMNS}
        FROM visits
        WHERE "restaurantId" = $1
        ORDER BY date DESC, created_at DESC`,

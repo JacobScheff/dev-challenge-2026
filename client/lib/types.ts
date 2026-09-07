@@ -21,9 +21,16 @@
  * contract in CHALLENGE.md. Run rows through these mappers instead.
  *
  * NOTE: these are TypeScript types. They are erased at build time and validate
- * nothing at runtime - a body that claims to be a Restaurant is still just
- * `unknown` until you check it. That check is your job (task A3).
+ * nothing at runtime. Request bodies are checked in the route validators.
  */
+
+/** Columns `toRestaurant` expects, with the timestamp already camelCased. */
+export const RESTAURANT_COLUMNS =
+  'id, name, cuisine, address, rating, created_at AS "createdAt"';
+
+/** Columns `toVisit` expects, with the timestamp already camelCased. */
+export const VISIT_COLUMNS =
+  'id, "restaurantId", date, "amountSpent", notes, created_at AS "createdAt"';
 
 export interface Restaurant {
   id: number;
@@ -120,7 +127,7 @@ function lastVisitDate(value: unknown): string | null {
 }
 
 /** Convert a grouped spend row into the shape GET /api/summary returns. */
-export function toRestaurantSpend(row: Record<string, unknown>): RestaurantSpend {
+function toRestaurantSpend(row: Record<string, unknown>): RestaurantSpend {
   return {
     id: Number(row.id),
     name: String(row.name),

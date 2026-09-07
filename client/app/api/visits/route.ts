@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { pool } from '@/db/pool';
-import { handleError, HttpError } from '@/lib/errors';
-import { toVisit } from '@/lib/types';
+import { handleError, restaurantNotFound } from '@/lib/errors';
+import { VISIT_COLUMNS, toVisit } from '@/lib/types';
 import { parseVisitBody } from './validate';
 
 /**
@@ -17,13 +17,12 @@ export async function POST(req: Request) {
       `INSERT INTO visits ("restaurantId", date, "amountSpent", notes)
        SELECT $1, $2, $3, $4
        WHERE EXISTS (SELECT 1 FROM restaurants WHERE id = $1)
-       RETURNING id, "restaurantId", date, "amountSpent", notes,
-                 created_at AS "createdAt"`,
+       RETURNING ${VISIT_COLUMNS}`,
       [restaurantId, date, amountSpent, notes]
     );
 
     if (rows.length === 0) {
-      throw new HttpError(404, 'Restaurant not found');
+      restaurantNotFound();
     }
 
     return NextResponse.json(toVisit(rows[0]), { status: 201 });

@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import { pool } from '@/db/pool';
-import { handleError, HttpError } from '@/lib/errors';
-import { toRestaurant } from '@/lib/types';
-import { parseRestaurantBody, parseRestaurantId } from '../validate';
+import { handleError, restaurantNotFound } from '@/lib/errors';
+import { RESTAURANT_COLUMNS, toRestaurant } from '@/lib/types';
+import { parseRestaurantId } from '@/lib/validate';
+import { parseRestaurantBody } from '../validate';
 
 type Params = { params: { id: string } };
 
@@ -14,12 +15,12 @@ export async function GET(_req: Request, { params }: Params) {
   try {
     const id = parseRestaurantId(params.id);
     const { rows } = await pool.query(
-      'SELECT * FROM restaurants WHERE id = $1',
+      `SELECT ${RESTAURANT_COLUMNS} FROM restaurants WHERE id = $1`,
       [id]
     );
 
     if (rows.length === 0) {
-      throw new HttpError(404, 'Restaurant not found');
+      restaurantNotFound();
     }
 
     return NextResponse.json(toRestaurant(rows[0]));
@@ -41,12 +42,12 @@ export async function PUT(req: Request, { params }: Params) {
       `UPDATE restaurants
        SET name = $1, cuisine = $2, address = $3, rating = $4
        WHERE id = $5
-       RETURNING id, name, cuisine, address, rating, created_at AS "createdAt"`,
+       RETURNING ${RESTAURANT_COLUMNS}`,
       [name, cuisine, address, rating, id]
     );
 
     if (rows.length === 0) {
-      throw new HttpError(404, 'Restaurant not found');
+      restaurantNotFound();
     }
 
     return NextResponse.json(toRestaurant(rows[0]));
@@ -68,7 +69,7 @@ export async function DELETE(_req: Request, { params }: Params) {
     );
 
     if (rows.length === 0) {
-      throw new HttpError(404, 'Restaurant not found');
+      restaurantNotFound();
     }
 
     return new NextResponse(null, { status: 204 });
