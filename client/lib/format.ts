@@ -46,6 +46,13 @@ export function visitLabel(count: number): string {
   return count === 1 ? '1 visit' : `${count} visits`;
 }
 
+export function restaurantDetails(
+  cuisine: string | null,
+  address: string | null
+): string {
+  return [cuisine, address].filter(Boolean).join(' · ') || 'No details yet';
+}
+
 /** Make API/field errors readable in the UI (sentence case, trailing period). */
 export function formatUiError(message: string): string {
   const trimmed = message.trim();

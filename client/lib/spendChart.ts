@@ -10,7 +10,7 @@ const LINE_COLORS = [
   '#0284c7',
 ] as const;
 
-const TOTAL_COLOR = '#1c1917';
+export const SPEND_COLOR = '#1c1917';
 
 type LineSeries = {
   key: string;
@@ -44,9 +44,20 @@ function niceTicks(max: number): number[] {
   return ticks;
 }
 
-export function chartScale(max: number): { ticks: number[]; scaleMax: number } {
+type Scale = { ticks: number[]; scaleMax: number };
+
+export function chartScale(max: number): Scale {
   const ticks = niceTicks(max);
   return { ticks, scaleMax: ticks[ticks.length - 1] ?? 1 };
+}
+
+export function visitScale(max: number): Scale {
+  const top = Math.max(1, Math.ceil(max));
+  const step = top <= 5 ? 1 : Math.ceil(top / 4);
+  const scaleMax = Math.ceil(top / step) * step;
+  const ticks: number[] = [];
+  for (let value = 0; value <= scaleMax; value += step) ticks.push(value);
+  return { ticks, scaleMax };
 }
 
 export function toLineChartModel(months: MonthSpend[]): {
@@ -63,7 +74,7 @@ export function toLineChartModel(months: MonthSpend[]): {
       color: LINE_COLORS[index % LINE_COLORS.length],
       isTotal: false,
     })),
-    { key: 'total', label: 'Total', color: TOTAL_COLOR, isTotal: true },
+    { key: 'total', label: 'Total', color: SPEND_COLOR, isTotal: true },
   ];
 
   const runningById = new Map<number, number>(restaurants.map((row) => [row.id, 0]));

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { FormError } from '@/components/FormError';
 import { StarRating } from '@/components/StarRating';
 import { ApiError, deleteRestaurant, updateRestaurant } from '@/lib/apiClient';
+import { restaurantDetails } from '@/lib/format';
 import type { Restaurant } from '@/lib/types';
 
 const inlineName =
@@ -134,8 +135,7 @@ export function RestaurantHeader({ restaurant }: { restaurant: Restaurant }) {
             </div>
           ) : (
             <p className="mt-1 break-words text-sm text-stone-500 [overflow-wrap:anywhere]">
-              {[restaurant.cuisine, restaurant.address].filter(Boolean).join(' · ') ||
-                'No details yet'}
+              {restaurantDetails(restaurant.cuisine, restaurant.address)}
             </p>
           )}
         </div>

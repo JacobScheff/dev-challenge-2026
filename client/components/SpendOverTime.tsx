@@ -7,7 +7,6 @@ import type { MonthSpend } from '@/lib/types';
 const SHOW_TOTAL_KEY = 'feeding-brennen.show-total';
 
 function readShowTotal(): boolean {
-  if (typeof window === 'undefined') return false;
   return window.localStorage.getItem(SHOW_TOTAL_KEY) === '1';
 }
 
@@ -54,11 +53,15 @@ function TotalToggle({
 
 export function SpendOverTime({ byMonth }: { byMonth: MonthSpend[] }) {
   const [showTotal, setShowTotal] = useState(false);
+  const [chartReady, setChartReady] = useState(false);
   const [animateToggle, setAnimateToggle] = useState(false);
 
   useLayoutEffect(() => {
     setShowTotal(readShowTotal());
-    const frame = requestAnimationFrame(() => setAnimateToggle(true));
+    const frame = requestAnimationFrame(() => {
+      setChartReady(true);
+      setAnimateToggle(true);
+    });
     return () => cancelAnimationFrame(frame);
   }, []);
 
@@ -91,8 +94,10 @@ export function SpendOverTime({ byMonth }: { byMonth: MonthSpend[] }) {
       <div className="mt-4">
         {byMonth.length === 0 ? (
           <EmptyChart />
-        ) : (
+        ) : chartReady ? (
           <RunningTotalChart months={byMonth} showTotal={showTotal} />
+        ) : (
+          <div className="h-56 w-full" />
         )}
       </div>
     </section>

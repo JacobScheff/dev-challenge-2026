@@ -3,10 +3,12 @@
 import Link from 'next/link';
 import { useLayoutEffect, useRef, useState } from 'react';
 import { StarRating } from '@/components/StarRating';
-import { formatDate, money, visitLabel } from '@/lib/format';
+import { formatDate, money, restaurantDetails, visitLabel } from '@/lib/format';
 import {
   SORT_OPTIONS,
   directionLabel,
+  parseSortState,
+  sortLabel,
   sortRestaurants,
   type RestaurantListItem,
   type RestaurantSortKey,
@@ -18,11 +20,17 @@ const SORT_MOVE_EASE = 'cubic-bezier(0.22, 1, 0.36, 1)';
 const COLUMNS =
   'grid grid-cols-[minmax(0,1fr)_5.5rem_6.75rem] gap-4 sm:grid-cols-[minmax(0,1fr)_6rem_7.25rem]';
 
+function restaurantNodes(list: HTMLElement): HTMLElement[] {
+  return Array.from(list.children).filter(
+    (node): node is HTMLElement =>
+      node instanceof HTMLElement && Boolean(node.dataset.restaurantId)
+  );
+}
+
 function captureItemTops(list: HTMLElement): Map<string, number> {
   const tops = new Map<string, number>();
-  for (const node of list.children) {
-    if (!(node instanceof HTMLElement) || !node.dataset.restaurantId) continue;
-    tops.set(node.dataset.restaurantId, node.getBoundingClientRect().top);
+  for (const node of restaurantNodes(list)) {
+    tops.set(node.dataset.restaurantId!, node.getBoundingClientRect().top);
   }
   return tops;
 }
@@ -30,11 +38,7 @@ function captureItemTops(list: HTMLElement): Map<string, number> {
 function animateSortReorder(list: HTMLElement, previousTops: Map<string, number>) {
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
-  const nodes = Array.from(list.children).filter(
-    (node): node is HTMLElement =>
-      node instanceof HTMLElement && Boolean(node.dataset.restaurantId)
-  );
-
+  const nodes = restaurantNodes(list);
   for (const node of nodes) {
     for (const animation of node.getAnimations()) {
       animation.cancel();
@@ -42,9 +46,7 @@ function animateSortReorder(list: HTMLElement, previousTops: Map<string, number>
   }
 
   for (const node of nodes) {
-    const id = node.dataset.restaurantId;
-    if (!id) continue;
-    const previousTop = previousTops.get(id);
+    const previousTop = previousTops.get(node.dataset.restaurantId!);
     if (previousTop == null) continue;
     const deltaY = previousTop - node.getBoundingClientRect().top;
     if (Math.abs(deltaY) < 1) continue;
@@ -60,21 +62,9 @@ function animateSortReorder(list: HTMLElement, previousTops: Map<string, number>
   }
 }
 
-function isSortKey(value: unknown): value is RestaurantSortKey {
-  return value === 'name' || value === 'spent' || value === 'lastVisit';
-}
-
 function readStoredSort(): { key: RestaurantSortKey; reversed: boolean } | null {
-  if (typeof window === 'undefined') return null;
   try {
-    const raw = window.localStorage.getItem(SORT_STORAGE_KEY);
-    if (!raw) return null;
-    const parsed: unknown = JSON.parse(raw);
-    if (!parsed || typeof parsed !== 'object') return null;
-    const key = (parsed as { key?: unknown }).key;
-    const reversed = (parsed as { reversed?: unknown }).reversed;
-    if (!isSortKey(key) || typeof reversed !== 'boolean') return null;
-    return { key, reversed };
+    return parseSortState(window.localStorage.getItem(SORT_STORAGE_KEY));
   } catch {
     return null;
   }
@@ -184,7 +174,7 @@ export function RestaurantList({ restaurants }: { restaurants: RestaurantListIte
 
   const sorted = sortRestaurants(restaurants, sortKey, reversed);
   const currentDirection = directionLabel(sortKey, reversed);
-  const currentLabel = SORT_OPTIONS.find((option) => option.key === sortKey)?.label ?? 'Name';
+  const currentLabel = sortLabel(sortKey);
 
   return (
     <div className="overflow-hidden rounded-xl border border-stone-200 bg-white shadow-sm">
@@ -211,9 +201,7 @@ export function RestaurantList({ restaurants }: { restaurants: RestaurantListIte
                     <StarRating rating={restaurant.rating} />
                   </div>
                   <p className="mt-0.5 truncate text-sm text-stone-500">
-                    {[restaurant.cuisine, restaurant.address]
-                      .filter(Boolean)
-                      .join(' · ') || 'No details yet'}
+                    {restaurantDetails(restaurant.cuisine, restaurant.address)}
                   </p>
                 </div>
                 <div className="text-right">

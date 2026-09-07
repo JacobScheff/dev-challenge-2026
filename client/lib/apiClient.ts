@@ -56,6 +56,14 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return res.json();
 }
 
+function jsonBody(method: 'POST' | 'PUT', body: unknown): RequestInit {
+  return {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  };
+}
+
 export function getRestaurants(): Promise<Restaurant[]> {
   return request('/api/restaurants');
 }
@@ -79,19 +87,11 @@ type VisitWrite = {
 };
 
 export function createVisit(input: VisitWrite & { restaurantId: number }): Promise<Visit> {
-  return request('/api/visits', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(input),
-  });
+  return request('/api/visits', jsonBody('POST', input));
 }
 
 export function updateVisit(id: number | string, input: VisitWrite): Promise<Visit> {
-  return request(`/api/visits/${id}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(input),
-  });
+  return request(`/api/visits/${id}`, jsonBody('PUT', input));
 }
 
 export function deleteVisit(id: number | string): Promise<void> {
@@ -99,22 +99,14 @@ export function deleteVisit(id: number | string): Promise<void> {
 }
 
 export function createRestaurant(input: RestaurantWrite): Promise<Restaurant> {
-  return request('/api/restaurants', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(input),
-  });
+  return request('/api/restaurants', jsonBody('POST', input));
 }
 
 export function updateRestaurant(
   id: number | string,
   input: RestaurantWrite
 ): Promise<Restaurant> {
-  return request(`/api/restaurants/${id}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(input),
-  });
+  return request(`/api/restaurants/${id}`, jsonBody('PUT', input));
 }
 
 export function deleteRestaurant(id: number | string): Promise<void> {

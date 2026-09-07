@@ -6,7 +6,7 @@ import { ApiError } from '@/lib/apiClient';
 import { todayYmd } from '@/lib/format';
 import type { Visit } from '@/lib/types';
 
-export type VisitFormValues = {
+type VisitFormValues = {
   date: string;
   amountSpent: number;
   notes: string | null;

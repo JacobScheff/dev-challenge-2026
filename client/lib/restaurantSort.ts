@@ -1,23 +1,18 @@
 import type { Restaurant, RestaurantSpend } from './types';
 
-export type RestaurantSortKey = 'name' | 'spent' | 'lastVisit';
+export const SORT_OPTIONS = [
+  { key: 'name', label: 'Name', forward: 'A–Z', reverse: 'Z–A' },
+  { key: 'spent', label: 'Spent', forward: 'High–low', reverse: 'Low–high' },
+  { key: 'lastVisit', label: 'Last visit', forward: 'Newest', reverse: 'Oldest' },
+] as const;
+
+export type RestaurantSortKey = (typeof SORT_OPTIONS)[number]['key'];
 
 export interface RestaurantListItem extends Restaurant {
   totalSpent: number;
   visitCount: number;
   lastVisit: string | null;
 }
-
-export const SORT_OPTIONS: {
-  key: RestaurantSortKey;
-  label: string;
-  forward: string;
-  reverse: string;
-}[] = [
-  { key: 'name', label: 'Name', forward: 'A–Z', reverse: 'Z–A' },
-  { key: 'spent', label: 'Spent', forward: 'High–low', reverse: 'Low–high' },
-  { key: 'lastVisit', label: 'Last visit', forward: 'Newest', reverse: 'Oldest' },
-];
 
 export function toRestaurantListItem(
   restaurant: Restaurant,
@@ -32,7 +27,7 @@ export function toRestaurantListItem(
 }
 
 /** Default direction is A–Z, most spent, most recent. */
-export function isDefaultDescending(key: RestaurantSortKey): boolean {
+function isDefaultDescending(key: RestaurantSortKey): boolean {
   return key !== 'name';
 }
 
@@ -62,8 +57,35 @@ export function sortRestaurants(
   });
 }
 
+function optionFor(key: RestaurantSortKey) {
+  return SORT_OPTIONS.find((item) => item.key === key)!;
+}
+
 export function directionLabel(key: RestaurantSortKey, reversed: boolean): string {
-  const option = SORT_OPTIONS.find((item) => item.key === key);
-  if (!option) return '';
+  const option = optionFor(key);
   return reversed ? option.reverse : option.forward;
+}
+
+export function sortLabel(key: RestaurantSortKey): string {
+  return optionFor(key).label;
+}
+
+function isSortKey(value: unknown): value is RestaurantSortKey {
+  return SORT_OPTIONS.some((option) => option.key === value);
+}
+
+export function parseSortState(raw: string | null): {
+  key: RestaurantSortKey;
+  reversed: boolean;
+} | null {
+  if (!raw) return null;
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return null;
+    const { key, reversed } = parsed as { key?: unknown; reversed?: unknown };
+    if (!isSortKey(key) || typeof reversed !== 'boolean') return null;
+    return { key, reversed };
+  } catch {
+    return null;
+  }
 }

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { FormError } from '@/components/FormError';
 import { ApiError } from '@/lib/apiClient';
 
-export type RestaurantFormValues = {
+type RestaurantFormValues = {
   name: string;
   cuisine: string | null;
   address: string | null;

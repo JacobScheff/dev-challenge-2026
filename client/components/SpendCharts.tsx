@@ -13,7 +13,7 @@ import {
   YAxis,
 } from 'recharts';
 import type { TooltipProps } from 'recharts';
-import { chartScale, toLineChartModel } from '@/lib/spendChart';
+import { SPEND_COLOR, chartScale, toLineChartModel, visitScale } from '@/lib/spendChart';
 import type { MonthSpend } from '@/lib/types';
 import { axisMoney, formatMonth, money, visitLabel } from '@/lib/format';
 
@@ -21,14 +21,19 @@ const AXIS = { fontSize: 11, fill: '#78716c' };
 const GRID = '#d6d3d1';
 const VISIT_LINE = '#2563eb';
 
-function visitScale(max: number): { ticks: number[]; scaleMax: number } {
-  const top = Math.max(1, Math.ceil(max));
-  const step = top <= 5 ? 1 : Math.ceil(top / 4);
-  const scaleMax = Math.ceil(top / step) * step;
-  const ticks: number[] = [];
-  for (let value = 0; value <= scaleMax; value += step) ticks.push(value);
-  return { ticks, scaleMax };
-}
+const monthAxis = {
+  dataKey: 'month' as const,
+  tick: AXIS,
+  tickLine: false,
+  axisLine: false,
+  tickFormatter: (value: string) => formatMonth(value),
+};
+
+const valueAxis = {
+  tick: AXIS,
+  tickLine: false,
+  axisLine: false,
+};
 
 function TooltipFrame({
   title,
@@ -93,6 +98,41 @@ function BarTooltip({ active, payload, label }: TooltipProps<number, string>) {
   );
 }
 
+function ChartLegend({
+  items,
+}: {
+  items: {
+    key: string;
+    label: string;
+    color: string;
+    swatch: 'bar' | 'line';
+    emphasize?: boolean;
+  }[];
+}) {
+  return (
+    <ul className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
+      {items.map((item) => (
+        <li key={item.key} className="flex items-center gap-1.5 text-xs">
+          <span
+            className={
+              item.swatch === 'bar'
+                ? 'inline-block h-2 w-2.5 rounded-sm'
+                : 'inline-block h-0.5 w-3.5 rounded-full'
+            }
+            style={{ backgroundColor: item.color }}
+            aria-hidden="true"
+          />
+          <span
+            className={item.emphasize ? 'font-semibold text-stone-900' : 'text-stone-600'}
+          >
+            {item.label}
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 export function MonthlyBarChart({ months }: { months: MonthSpend[] }) {
   const spend = chartScale(
     Math.max(...months.map((month) => month.totalSpent), 0)
@@ -110,29 +150,19 @@ export function MonthlyBarChart({ months }: { months: MonthSpend[] }) {
             margin={{ top: 8, right: 8, left: 4, bottom: 0 }}
           >
             <CartesianGrid vertical={false} stroke={GRID} />
-            <XAxis
-              dataKey="month"
-              tick={AXIS}
-              tickLine={false}
-              axisLine={false}
-              tickFormatter={(value: string) => formatMonth(value)}
-            />
+            <XAxis {...monthAxis} />
             <YAxis
+              {...valueAxis}
               yAxisId="spend"
-              tick={AXIS}
-              tickLine={false}
-              axisLine={false}
               width={44}
               ticks={spend.ticks}
               domain={[0, spend.scaleMax]}
               tickFormatter={(value: number) => axisMoney(value)}
             />
             <YAxis
+              {...valueAxis}
               yAxisId="visits"
               orientation="right"
-              tick={AXIS}
-              tickLine={false}
-              axisLine={false}
               width={28}
               allowDecimals={false}
               ticks={visits.ticks}
@@ -146,7 +176,7 @@ export function MonthlyBarChart({ months }: { months: MonthSpend[] }) {
               yAxisId="spend"
               dataKey="totalSpent"
               name="Spent"
-              fill="#1c1917"
+              fill={SPEND_COLOR}
               radius={[4, 4, 0, 0]}
             />
             <Line
@@ -162,23 +192,12 @@ export function MonthlyBarChart({ months }: { months: MonthSpend[] }) {
           </ComposedChart>
         </ResponsiveContainer>
       </div>
-      <ul className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
-        <li className="flex items-center gap-1.5 text-xs text-stone-600">
-          <span
-            className="inline-block h-2 w-2.5 rounded-sm bg-stone-900"
-            aria-hidden="true"
-          />
-          Spent
-        </li>
-        <li className="flex items-center gap-1.5 text-xs text-stone-600">
-          <span
-            className="inline-block h-0.5 w-3.5 rounded-full"
-            style={{ backgroundColor: VISIT_LINE }}
-            aria-hidden="true"
-          />
-          Visits
-        </li>
-      </ul>
+      <ChartLegend
+        items={[
+          { key: 'spent', label: 'Spent', color: SPEND_COLOR, swatch: 'bar' },
+          { key: 'visits', label: 'Visits', color: VISIT_LINE, swatch: 'line' },
+        ]}
+      />
     </div>
   );
 }
@@ -200,17 +219,9 @@ export function RunningTotalChart({
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={rows} margin={{ top: 8, right: 16, left: 4, bottom: 0 }}>
             <CartesianGrid vertical={false} stroke={GRID} />
-            <XAxis
-              dataKey="month"
-              tick={AXIS}
-              tickLine={false}
-              axisLine={false}
-              tickFormatter={(value: string) => formatMonth(value)}
-            />
+            <XAxis {...monthAxis} />
             <YAxis
-              tick={AXIS}
-              tickLine={false}
-              axisLine={false}
+              {...valueAxis}
               width={48}
               ticks={ticks}
               domain={[0, scaleMax]}
@@ -235,22 +246,15 @@ export function RunningTotalChart({
           </LineChart>
         </ResponsiveContainer>
       </div>
-      <ul className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
-        {visibleSeries.map((line) => (
-          <li key={line.key} className="flex items-center gap-1.5 text-xs">
-            <span
-              className="inline-block h-0.5 w-3.5 rounded-full"
-              style={{ backgroundColor: line.color }}
-              aria-hidden="true"
-            />
-            <span
-              className={line.isTotal ? 'font-semibold text-stone-900' : 'text-stone-600'}
-            >
-              {line.label}
-            </span>
-          </li>
-        ))}
-      </ul>
+      <ChartLegend
+        items={visibleSeries.map((line) => ({
+          key: line.key,
+          label: line.label,
+          color: line.color,
+          swatch: 'line' as const,
+          emphasize: line.isTotal,
+        }))}
+      />
     </div>
   );
 }

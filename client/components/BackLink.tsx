@@ -1,9 +1,9 @@
 import Link from 'next/link';
 
-export function BackLink({ href = '/' }: { href?: string }) {
+export function BackLink() {
   return (
     <Link
-      href={href}
+      href="/"
       className="inline-flex items-center gap-1.5 rounded-lg border border-stone-300 bg-white px-3 py-1.5 text-sm font-medium text-stone-800 shadow-sm transition hover:bg-stone-50"
     >
       <svg
