@@ -57,7 +57,7 @@ export default async function RestaurantPage({ params }: Params) {
             The tab by month
           </p>
           <p className="mt-1 text-sm text-stone-500">
-            What this restaurant added to the tab each month.
+            What this restaurant added to the tab each month, plus visits.
           </p>
           <div className="mt-4">
             <MonthlyBarChart months={byMonth} />
