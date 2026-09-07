@@ -46,14 +46,34 @@ export function RestaurantHeader({ restaurant }: { restaurant: Restaurant }) {
   return (
     <div>
       <div className="flex items-start justify-between gap-4">
-        <div>
+        <div className="min-w-0">
           <h2 className="text-2xl font-semibold tracking-tight">{restaurant.name}</h2>
+          <div className="mt-1">
+            <StarRating rating={restaurant.rating} size="md" />
+          </div>
           <p className="mt-1 text-sm text-stone-500">
             {[restaurant.cuisine, restaurant.address].filter(Boolean).join(' · ') ||
               'No details yet'}
           </p>
         </div>
-        <StarRating rating={restaurant.rating} size="md" />
+        {confirmingDelete ? null : (
+          <div className="flex shrink-0 flex-wrap justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setEditing(true)}
+              className="rounded-lg border border-stone-300 bg-white px-3 py-1.5 text-sm font-medium text-stone-800 shadow-sm transition hover:bg-stone-50"
+            >
+              Edit
+            </button>
+            <button
+              type="button"
+              onClick={() => setConfirmingDelete(true)}
+              className="rounded-lg border border-red-200 bg-white px-3 py-1.5 text-sm font-medium text-red-700 shadow-sm transition hover:bg-red-50"
+            >
+              Delete
+            </button>
+          </div>
+        )}
       </div>
 
       {confirmingDelete ? (
@@ -89,24 +109,7 @@ export function RestaurantHeader({ restaurant }: { restaurant: Restaurant }) {
             </button>
           </div>
         </div>
-      ) : (
-        <div className="mt-4 flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => setEditing(true)}
-            className="rounded-lg border border-stone-300 bg-white px-3 py-1.5 text-sm font-medium text-stone-800 shadow-sm transition hover:bg-stone-50"
-          >
-            Edit
-          </button>
-          <button
-            type="button"
-            onClick={() => setConfirmingDelete(true)}
-            className="rounded-lg border border-red-200 bg-white px-3 py-1.5 text-sm font-medium text-red-700 shadow-sm transition hover:bg-red-50"
-          >
-            Delete
-          </button>
-        </div>
-      )}
+      ) : null}
     </div>
   );
 }
