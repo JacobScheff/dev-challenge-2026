@@ -1,19 +1,24 @@
-import { HttpError, restaurantNotFound } from '@/lib/errors';
+import { HttpError, restaurantNotFound, visitNotFound } from '@/lib/errors';
 
 /**
  * Path ids that aren't a positive integer (`abc`, `-1`, `1.5`, `0`) have no
  * matching row. The contract treats that as 404, not 400.
  */
-export function parseRestaurantId(id: string): number {
-  if (!/^[1-9]\d*$/.test(id)) {
-    restaurantNotFound();
-  }
-
+function parsePositiveIntId(id: string): number | null {
+  if (!/^[1-9]\d*$/.test(id)) return null;
   const parsed = Number(id);
-  if (!Number.isSafeInteger(parsed)) {
-    restaurantNotFound();
-  }
+  return Number.isSafeInteger(parsed) ? parsed : null;
+}
 
+export function parseRestaurantId(id: string): number {
+  const parsed = parsePositiveIntId(id);
+  if (parsed === null) restaurantNotFound();
+  return parsed;
+}
+
+export function parseVisitId(id: string): number {
+  const parsed = parsePositiveIntId(id);
+  if (parsed === null) visitNotFound();
   return parsed;
 }
 

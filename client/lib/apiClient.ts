@@ -72,17 +72,30 @@ export function getSummary(): Promise<SpendSummary> {
   return request('/api/summary');
 }
 
-export function createVisit(input: {
-  restaurantId: number;
+type VisitWrite = {
   date: string;
   amountSpent: number;
   notes?: string | null;
-}): Promise<Visit> {
+};
+
+export function createVisit(input: VisitWrite & { restaurantId: number }): Promise<Visit> {
   return request('/api/visits', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(input),
   });
+}
+
+export function updateVisit(id: number | string, input: VisitWrite): Promise<Visit> {
+  return request(`/api/visits/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+}
+
+export function deleteVisit(id: number | string): Promise<void> {
+  return request(`/api/visits/${id}`, { method: 'DELETE' });
 }
 
 export function createRestaurant(input: RestaurantWrite): Promise<Restaurant> {

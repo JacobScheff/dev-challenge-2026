@@ -54,13 +54,23 @@ function parseAmountSpent(value: unknown): number {
   return Math.round(cents) / 100;
 }
 
+/** Date, spend, and notes — shared by create and update. */
+export function parseVisitWrite(body: unknown) {
+  const { date, amountSpent, notes } = requireBody(body);
+  return {
+    date: parseDateOnly(date),
+    amountSpent: parseAmountSpent(amountSpent),
+    notes: optionalString(notes, 'notes', 2000),
+  };
+}
+
 /**
  * Shared by POST /api/visits. restaurantId must be a positive integer
  * in the body (400 if it isn't). A well-formed id that doesn't exist
  * is a 404 — the route checks that after parsing.
  */
 export function parseVisitBody(body: unknown) {
-  const { restaurantId, date, amountSpent, notes } = requireBody(body);
+  const { restaurantId } = requireBody(body);
 
   if (
     typeof restaurantId !== 'number' ||
@@ -72,8 +82,6 @@ export function parseVisitBody(body: unknown) {
 
   return {
     restaurantId,
-    date: parseDateOnly(date),
-    amountSpent: parseAmountSpent(amountSpent),
-    notes: optionalString(notes, 'notes', 2000),
+    ...parseVisitWrite(body),
   };
 }

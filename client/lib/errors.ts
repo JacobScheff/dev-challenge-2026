@@ -18,6 +18,10 @@ export function restaurantNotFound(): never {
   throw new HttpError(404, 'Restaurant not found');
 }
 
+export function visitNotFound(): never {
+  throw new HttpError(404, 'Visit not found');
+}
+
 function postgresCode(err: unknown): string | undefined {
   if (err && typeof err === 'object' && 'code' in err && typeof (err as { code: unknown }).code === 'string') {
     return (err as { code: string }).code;

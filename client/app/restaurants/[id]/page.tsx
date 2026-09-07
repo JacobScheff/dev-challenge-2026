@@ -1,9 +1,10 @@
 import { notFound } from 'next/navigation';
 import { BackLink } from '@/components/BackLink';
 import { ApiError, getRestaurant, getRestaurantVisits } from '@/lib/apiClient';
-import { formatDate, money, visitLabel } from '@/lib/format';
+import { money, visitLabel } from '@/lib/format';
 import { LogVisitForm } from './LogVisitForm';
 import { RestaurantHeader } from './RestaurantHeader';
+import { VisitList } from './VisitList';
 
 type Params = { params: { id: string } };
 
@@ -64,26 +65,7 @@ export default async function RestaurantPage({ params }: Params) {
             Nothing logged yet. Use the form above to add the first visit.
           </p>
         ) : (
-          <ul className="overflow-hidden rounded-xl border border-stone-200 bg-white shadow-sm">
-            {visits.map((visit, index) => (
-              <li
-                key={visit.id}
-                className={`flex items-start justify-between gap-4 px-4 py-3 ${
-                  index > 0 ? 'border-t border-stone-100' : ''
-                }`}
-              >
-                <div className="min-w-0">
-                  <p className="text-sm font-medium">{formatDate(visit.date)}</p>
-                  {visit.notes ? (
-                    <p className="mt-0.5 text-sm text-stone-500">{visit.notes}</p>
-                  ) : null}
-                </div>
-                <p className="shrink-0 text-sm font-medium tabular-nums">
-                  {visit.amountSpent == null ? '—' : money(visit.amountSpent)}
-                </p>
-              </li>
-            ))}
-          </ul>
+          <VisitList visits={visits} />
         )}
       </section>
     </div>
