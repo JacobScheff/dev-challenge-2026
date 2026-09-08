@@ -2,7 +2,7 @@
 
 ## 1. What did you build for Part B, and why that?
 
-The goal of the app is to track restaurant visits and how much Brennan spends, so I started Part B by adding visit logging to the website since the database already had an unused visits table. The user can add visits for each restuarnt, including the date, total spent, and any notes about that visit, such as what the user ate. Then, I added support for editing and deleting visits in case the user accidentally submits incorrect data. Since visits had editing and deletion, I added support for those features to restaurants as well, and also slightly improved the overall UI at the same time.
+The goal of the app is to track restaurant visits and how much Brennan spends, so I started Part B by adding visit logging to the website since the database already had an unused visits table. The user can add visits for each restuarnt, including the date, total spent, and any notes about that visit, such as what the user ate. Then, I added support for editing and deleting visits in case the user accidentally submits incorrect data. Since visits had editing and deletion, I incorporated those features to restaurants as well, and also slightly improved the overall UI at the same time.
 
 Once the base functionality of the website was made, I added a way to track Brennan's spending. In the main page, there is a line chart that shows the total spending over time for each restaurant. The table below lists all of the restaurants that Brennan has been to, and the user can sort by name, total spent, or last visited. When viewing the data for a specific restaurant, there is a bar chart that shows how much the user spent for that restuarant each month. I added new restaurants and visits to the database's seeded data to verify that the UI can properly display all information in a clear format.
 
@@ -251,4 +251,4 @@ curl -i -X DELETE http://localhost:3000/api/visits/99999
 
 ## Known issues / what I'd do next
 
-The summary is all-time only, so I would want to add a date filter to it. The home chart also only has a small set of colors and starts to look cluttered if there are a lot of restaurants. There is no page that lists every visit, so the home page shows the tab and the restaurant list but not individual visits.
+The summary is all-time only, so I would want to add a date filter. For instance, it could show the user their spending habits for the past month instead of all-time. The line chart also only has a pre-defined set of colors, so it starts to look cluttered if there are a lot of restaurants since the colors can repeat. There is no page that lists every visit either, so the home page shows the tab and the restaurant list but not individual visits.
