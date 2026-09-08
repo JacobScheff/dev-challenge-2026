@@ -1,32 +1,48 @@
-import { getRestaurants } from '@/lib/apiClient';
+import { RestaurantsSection } from '@/components/RestaurantsSection';
+import { SpendOverTime } from '@/components/SpendOverTime';
+import { getRestaurants, getSummary } from '@/lib/apiClient';
+import { formatDate, money, visitLabel } from '@/lib/format';
+import { toRestaurantListItem } from '@/lib/restaurantSort';
 
-// Server component. Fetches restaurants on each request and renders a plain
-// list. There is no loading state, no empty state, and no error handling: if
-// the API is down or returns something unexpected, this throws.
 export default async function HomePage() {
-  const restaurants = await getRestaurants();
+  const [restaurants, summary] = await Promise.all([
+    getRestaurants(),
+    getSummary(),
+  ]);
+
+  const spendById = new Map(summary.byRestaurant.map((row) => [row.id, row]));
+  const restaurantItems = restaurants.map((restaurant) =>
+    toRestaurantListItem(restaurant, spendById.get(restaurant.id))
+  );
 
   return (
-    <div>
-      <h2 className="mb-4 text-lg font-medium">Restaurants</h2>
-      <ul className="space-y-3">
-        {restaurants.map((restaurant) => (
-          <li
-            key={restaurant.id}
-            className="rounded-lg border border-gray-200 bg-white p-4"
-          >
-            <div className="flex items-baseline justify-between">
-              <span className="font-medium">{restaurant.name}</span>
-              <span className="text-sm text-gray-500">
-                {restaurant.rating}★
-              </span>
-            </div>
-            <div className="mt-1 text-sm text-gray-600">
-              {restaurant.cuisine} · {restaurant.address}
-            </div>
-          </li>
-        ))}
-      </ul>
+    <div className="space-y-8">
+      <section className="rounded-xl border border-stone-200 bg-white p-5 shadow-sm">
+        <p className="text-xs font-medium uppercase tracking-wide text-stone-500">
+          The tab
+        </p>
+        <p className="mt-2 text-3xl font-semibold tracking-tight tabular-nums">
+          {money(summary.totalSpent)}
+        </p>
+        <dl className="mt-4 grid grid-cols-2 gap-3 border-t border-stone-100 pt-4 text-sm">
+          <div>
+            <dt className="text-stone-500">Visits</dt>
+            <dd className="mt-0.5 font-medium">{visitLabel(summary.visitCount)}</dd>
+          </div>
+          <div>
+            <dt className="text-stone-500">Last visit</dt>
+            <dd className="mt-0.5 font-medium">
+              {summary.lastVisit ? formatDate(summary.lastVisit) : '—'}
+            </dd>
+          </div>
+        </dl>
+      </section>
+
+      <div className="relative left-1/2 w-[calc(100vw-2.5rem)] -translate-x-1/2">
+        <SpendOverTime byMonth={summary.byMonth} restaurants={restaurantItems} />
+      </div>
+
+      <RestaurantsSection restaurants={restaurantItems} />
     </div>
   );
 }

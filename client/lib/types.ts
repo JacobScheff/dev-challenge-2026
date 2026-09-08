@@ -21,9 +21,16 @@
  * contract in CHALLENGE.md. Run rows through these mappers instead.
  *
  * NOTE: these are TypeScript types. They are erased at build time and validate
- * nothing at runtime - a body that claims to be a Restaurant is still just
- * `unknown` until you check it. That check is your job (task A3).
+ * nothing at runtime. Request bodies are checked in the route validators.
  */
+
+/** Columns `toRestaurant` expects, with the timestamp already camelCased. */
+export const RESTAURANT_COLUMNS =
+  'id, name, cuisine, address, rating, created_at AS "createdAt"';
+
+/** Columns `toVisit` expects, with the timestamp already camelCased. */
+export const VISIT_COLUMNS =
+  'id, "restaurantId", date, "amountSpent", notes, created_at AS "createdAt"';
 
 export interface Restaurant {
   id: number;
@@ -45,6 +52,42 @@ export interface Visit {
   notes: string | null;
   /** ISO 8601 timestamp. */
   createdAt: string;
+}
+
+/** One restaurant's contribution to the running tab. */
+export interface RestaurantSpend {
+  id: number;
+  name: string;
+  totalSpent: number;
+  visitCount: number;
+  /** Calendar date of the most recent visit, or null if none. */
+  lastVisit: string | null;
+}
+
+/** One restaurant's spend inside a single month. */
+interface MonthRestaurantSpend {
+  id: number;
+  name: string;
+  totalSpent: number;
+  visitCount: number;
+}
+
+/** Spend for one calendar month, with an optional per-restaurant split. */
+export interface MonthSpend {
+  /** Calendar month, "YYYY-MM". */
+  month: string;
+  totalSpent: number;
+  visitCount: number;
+  byRestaurant: MonthRestaurantSpend[];
+}
+
+/** Aggregated spend across every visit. */
+export interface SpendSummary {
+  totalSpent: number;
+  visitCount: number;
+  lastVisit: string | null;
+  byRestaurant: RestaurantSpend[];
+  byMonth: MonthSpend[];
 }
 
 // --- row mappers -------------------------------------------------------------
@@ -80,7 +123,7 @@ export function toRestaurant(row: Record<string, unknown>): Restaurant {
     cuisine: (row.cuisine as string | null) ?? null,
     address: (row.address as string | null) ?? null,
     rating: num(row.rating),
-    createdAt: isoTimestamp(row.createdAt),
+    createdAt: isoTimestamp(row.createdAt ?? row.created_at),
   };
 }
 
@@ -92,6 +135,91 @@ export function toVisit(row: Record<string, unknown>): Visit {
     date: dateOnly(row.date),
     amountSpent: num(row.amountSpent),
     notes: (row.notes as string | null) ?? null,
-    createdAt: isoTimestamp(row.createdAt),
+    createdAt: isoTimestamp(row.createdAt ?? row.created_at),
+  };
+}
+
+function lastVisitDate(value: unknown): string | null {
+  if (value === null || value === undefined) return null;
+  return dateOnly(value);
+}
+
+function spendSlice(row: Record<string, unknown>): MonthRestaurantSpend {
+  return {
+    id: Number(row.id),
+    name: String(row.name),
+    totalSpent: num(row.totalSpent) ?? 0,
+    visitCount: Number(row.visitCount),
+  };
+}
+
+function toRestaurantSpend(row: Record<string, unknown>): RestaurantSpend {
+  return {
+    ...spendSlice(row),
+    lastVisit: lastVisitDate(row.lastVisit),
+  };
+}
+
+function emptyMonth(month: string): MonthSpend {
+  return { month, totalSpent: 0, visitCount: 0, byRestaurant: [] };
+}
+
+function nextMonth(yyyyMm: string): string {
+  const [year, month] = yyyyMm.split('-').map(Number);
+  const date = new Date(year, month, 1);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function fillMonthGaps(byMonth: Map<string, MonthSpend>): MonthSpend[] {
+  const keys = [...byMonth.keys()].sort();
+  if (keys.length === 0) return [];
+
+  const months: MonthSpend[] = [];
+  for (let cursor = keys[0]; cursor <= keys[keys.length - 1]; cursor = nextMonth(cursor)) {
+    months.push(byMonth.get(cursor) ?? emptyMonth(cursor));
+  }
+  return months;
+}
+
+function toByMonth(rows: Record<string, unknown>[]): MonthSpend[] {
+  const grouped = new Map<string, MonthSpend>();
+
+  for (const row of rows) {
+    const month = String(row.month);
+    const existing = grouped.get(month) ?? emptyMonth(month);
+    const slice = spendSlice(row);
+    existing.totalSpent += slice.totalSpent;
+    existing.visitCount += slice.visitCount;
+    existing.byRestaurant.push(slice);
+    grouped.set(month, existing);
+  }
+
+  return fillMonthGaps(grouped);
+}
+
+/** Group a restaurant's visits into a contiguous month series (gaps are $0). */
+export function monthsFromVisits(visits: Visit[]): MonthSpend[] {
+  const grouped = new Map<string, MonthSpend>();
+  for (const visit of visits) {
+    const month = visit.date.slice(0, 7);
+    const existing = grouped.get(month) ?? emptyMonth(month);
+    existing.totalSpent += visit.amountSpent ?? 0;
+    existing.visitCount += 1;
+    grouped.set(month, existing);
+  }
+  return fillMonthGaps(grouped);
+}
+
+export function toSpendSummary(
+  totals: Record<string, unknown>,
+  restaurants: Record<string, unknown>[],
+  monthlyRows: Record<string, unknown>[]
+): SpendSummary {
+  return {
+    totalSpent: num(totals.totalSpent) ?? 0,
+    visitCount: Number(totals.visitCount),
+    lastVisit: lastVisitDate(totals.lastVisit),
+    byRestaurant: restaurants.map(toRestaurantSpend),
+    byMonth: toByMonth(monthlyRows),
   };
 }

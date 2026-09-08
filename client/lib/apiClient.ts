@@ -8,30 +8,107 @@
  * The shapes these helpers return live in `lib/types.ts`, shared with the
  * handlers that produce them.
  */
-import type { Restaurant } from './types';
+import type { Restaurant, SpendSummary, Visit } from './types';
 
-// We read a base URL from the environment because Server Components fetch on
-// the server, where relative URLs don't resolve - so we need an absolute origin.
-// It's the same app on the same port, so this is normally just localhost:3000.
-export const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+// Server Components fetch on the server, where relative URLs don't resolve.
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
-/**
- * Fetch every restaurant from the API.
- *
- * NOTE: this is a bare fetch with no error handling. It does not check the
- * response status and it does not catch network failures - callers get whatever
- * `res.json()` produces, including on a 500.
- */
-export async function getRestaurants(): Promise<Restaurant[]> {
-  const res = await fetch(`${API_URL}/api/restaurants`, { cache: 'no-store' });
+export class ApiError extends Error {
+  readonly status: number;
+
+  constructor(status: number, message: string) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+  }
+}
+
+type RestaurantWrite = {
+  name: string;
+  cuisine?: string | null;
+  address?: string | null;
+  rating?: number | null;
+};
+
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(`${API_URL}${path}`, { cache: 'no-store', ...init });
+  if (!res.ok) {
+    let message = `Request failed (${res.status})`;
+    try {
+      const body: unknown = await res.json();
+      if (
+        body &&
+        typeof body === 'object' &&
+        'error' in body &&
+        typeof (body as { error: unknown }).error === 'string'
+      ) {
+        message = (body as { error: string }).error;
+      }
+    } catch {
+      // Keep the status fallback if the body wasn't JSON.
+    }
+    throw new ApiError(res.status, message);
+  }
+  // DELETE returns 204 with an empty body.
+  if (res.status === 204) {
+    return undefined as T;
+  }
   return res.json();
 }
 
-/**
- * Fetch a single restaurant by id.
- */
-export async function getRestaurant(id: number | string): Promise<Restaurant> {
-  const res = await fetch(`${API_URL}/api/restaurants/${id}`, { cache: 'no-store' });
-  return res.json();
+function jsonBody(method: 'POST' | 'PUT', body: unknown): RequestInit {
+  return {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  };
+}
+
+export function getRestaurants(): Promise<Restaurant[]> {
+  return request('/api/restaurants');
+}
+
+export function getRestaurant(id: number | string): Promise<Restaurant> {
+  return request(`/api/restaurants/${id}`);
+}
+
+export function getRestaurantVisits(id: number | string): Promise<Visit[]> {
+  return request(`/api/restaurants/${id}/visits`);
+}
+
+export function getSummary(): Promise<SpendSummary> {
+  return request('/api/summary');
+}
+
+type VisitWrite = {
+  date: string;
+  amountSpent: number;
+  notes?: string | null;
+};
+
+export function createVisit(input: VisitWrite & { restaurantId: number }): Promise<Visit> {
+  return request('/api/visits', jsonBody('POST', input));
+}
+
+export function updateVisit(id: number | string, input: VisitWrite): Promise<Visit> {
+  return request(`/api/visits/${id}`, jsonBody('PUT', input));
+}
+
+export function deleteVisit(id: number | string): Promise<void> {
+  return request(`/api/visits/${id}`, { method: 'DELETE' });
+}
+
+export function createRestaurant(input: RestaurantWrite): Promise<Restaurant> {
+  return request('/api/restaurants', jsonBody('POST', input));
+}
+
+export function updateRestaurant(
+  id: number | string,
+  input: RestaurantWrite
+): Promise<Restaurant> {
+  return request(`/api/restaurants/${id}`, jsonBody('PUT', input));
+}
+
+export function deleteRestaurant(id: number | string): Promise<void> {
+  return request(`/api/restaurants/${id}`, { method: 'DELETE' });
 }
